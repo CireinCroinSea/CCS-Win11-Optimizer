@@ -6,8 +6,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Win11GamingOptimizer</AssemblyName>
-    <RootNamespace>Win11GamingOptimizer</RootNamespace>
+    <AssemblyName>CCSOptimizerWin11</AssemblyName>
+    <RootNamespace>CCSOptimizerWin11</RootNamespace>
     <PublishDir>$(MSBuildProjectDirectory)\publish</PublishDir>
   </PropertyGroup>
   <ItemGroup>

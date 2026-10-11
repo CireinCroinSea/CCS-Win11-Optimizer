@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Build Win11 Gaming Optimizer
+title Build CCS Optimizer Win11
 
 where dotnet >nul 2>nul
 if errorlevel 1 goto no_sdk
@@ -16,7 +16,7 @@ echo Removed generated bin and obj folders.
 echo.
 echo Build completed.
 echo EXE location:
-echo %~dp0publish\Win11GamingOptimizer.exe
+echo %~dp0publish\CCSOptimizerWin11.exe
 echo.
 pause
 exit /b 0

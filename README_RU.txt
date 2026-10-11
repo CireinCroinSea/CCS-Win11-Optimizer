@@ -1,4 +1,4 @@
-Win11 Gaming Optimizer — универсальный проект Windows 11 x64
+CCS Optimizer Win11 — утилита для Windows 11 x64
 Автор: cireincroinsea
 
 НОВЫЙ ИНТЕРФЕЙС:
@@ -9,7 +9,7 @@ Win11 Gaming Optimizer — универсальный проект Windows 11 x6
 1. Установи .NET 8 SDK x64: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
 2. Распакуй архив целиком.
 3. Запусти `Собрать_EXE.bat` (в архиве также оставлен `Build_EXE.bat`).
-4. EXE появится в publish\Win11GamingOptimizer.exe; после успешной публикации временные папки bin и obj удаляются автоматически.
+4. EXE появится в publish\CCSOptimizerWin11.exe; после успешной публикации временные папки bin и obj удаляются автоматически.
 
 ВАЖНО:
 - Программа запрашивает права администратора для системных твиков.

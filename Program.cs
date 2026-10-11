@@ -58,7 +58,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Win11 Gaming Optimizer";
+        Text = "CCS Optimizer Win11";
         Width = 1240; Height = 820; MinimumSize = new Size(1160, 740);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(12, 17, 27);
@@ -72,7 +72,7 @@ public sealed class MainForm : Form
         Controls.Add(root);
 
         var header = new Panel { Dock = DockStyle.Fill };
-        var title = new Label { Text = "WIN11 GAMING OPTIMIZER", Font = new Font("Segoe UI", 21, FontStyle.Bold), ForeColor = Color.White, AutoSize = true, Location = new Point(0, 0) };
+        var title = new Label { Text = "CCS OPTIMIZER WIN11", Font = new Font("Segoe UI", 21, FontStyle.Bold), ForeColor = Color.White, AutoSize = true, Location = new Point(0, 0) };
         var subtitle = new Label { Text = "Настройка игр и диагностика  •  Windows 11 x64", ForeColor = Color.FromArgb(170, 185, 204), AutoSize = true, Location = new Point(2, 45) };
         header.Controls.Add(title); header.Controls.Add(subtitle);
         var authorLink = new LinkLabel { Text = "Автор: @cireincroinsea", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), LinkColor = Color.FromArgb(0, 220, 255), ActiveLinkColor = Color.FromArgb(100, 240, 255), VisitedLinkColor = Color.FromArgb(0, 220, 255), BackColor = Color.Transparent, Location = new Point(2 + TextRenderer.MeasureText(subtitle.Text, subtitle.Font).Width + 10, 45), LinkBehavior = LinkBehavior.HoverUnderline };
@@ -291,7 +291,7 @@ public sealed class MainForm : Form
                     string translatedTag = english && translations.TryGetValue(tag, out var et) ? et : !english && reverseTranslations.TryGetValue(tag, out var rt) ? rt : tag;
                     b.Tag = translatedTag; b.Text = translatedTag;
                 }
-            Text = english ? "Win11 Gaming Optimizer" : "Win11 Gaming Optimizer";
+            Text = "CCS Optimizer Win11";
             File.WriteAllText(languageFile, lang);
             Log(english ? "Interface language changed to English." : "Язык интерфейса изменён на русский.");
         }
