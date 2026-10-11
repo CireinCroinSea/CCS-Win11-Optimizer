@@ -6,13 +6,17 @@ where dotnet >nul 2>nul
 if errorlevel 1 goto no_sdk
 
 dotnet --list-sdks
-dotnet publish "%~dp0Win11GamingOptimizer.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish "%~dp0Win11GamingOptimizer.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -p:DebugSymbols=false -o "%~dp0publish"
 if errorlevel 1 goto build_failed
+
+if exist "%~dp0bin" rmdir /s /q "%~dp0bin"
+if exist "%~dp0obj" rmdir /s /q "%~dp0obj"
+echo Removed generated bin and obj folders.
 
 echo.
 echo Build completed.
 echo EXE location:
-echo %~dp0bin\Release\net8.0-windows\win-x64\publish\Win11GamingOptimizer.exe
+echo %~dp0publish\Win11GamingOptimizer.exe
 echo.
 pause
 exit /b 0

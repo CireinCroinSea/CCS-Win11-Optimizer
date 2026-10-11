@@ -24,6 +24,10 @@ internal static class Program
 
 public sealed class MainForm : Form
 {
+    private LibreHardwareMonitor.Hardware.Computer? hardwareComputer;
+    private bool hardwareOpenAttempted;
+    private readonly object hardwareSync = new();
+
     [DllImport("uxtheme.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int SetWindowTheme(IntPtr hWnd, string? appName, string? idList);
 
@@ -38,10 +42,10 @@ public sealed class MainForm : Form
         control.HandleCreated += (_, _) => Apply();
         Apply();
     }
-    private Color themeAccent = Color.FromArgb(45, 108, 223);
-    private Color themeInactiveButton = Color.FromArgb(25, 33, 47);
-    private Color themeHoverButton = Color.FromArgb(39, 52, 73);
-    private Color themePressedButton = Color.FromArgb(45, 108, 223);
+    private Color themeAccent = Color.FromArgb(70, 130, 255);
+    private Color themeInactiveButton = Color.FromArgb(24, 34, 50);
+    private Color themeHoverButton = Color.FromArgb(38, 53, 76);
+    private Color themePressedButton = Color.FromArgb(70, 130, 255);
 
     private readonly TextBox log = new()
     {
@@ -57,18 +61,18 @@ public sealed class MainForm : Form
         Text = "Win11 Gaming Optimizer";
         Width = 1240; Height = 820; MinimumSize = new Size(1160, 740);
         StartPosition = FormStartPosition.CenterScreen;
-        BackColor = Color.FromArgb(16, 20, 29);
+        BackColor = Color.FromArgb(12, 17, 27);
         ForeColor = Color.FromArgb(232, 237, 245);
         Font = new Font("Segoe UI", 10);
 
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 3 };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 94));
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(24, 18, 24, 16), ColumnCount = 1, RowCount = 3, BackColor = Color.FromArgb(12, 17, 27) };
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
         Controls.Add(root);
 
         var header = new Panel { Dock = DockStyle.Fill };
-        var title = new Label { Text = "WIN11 GAMING OPTIMIZER", Font = new Font("Segoe UI", 20, FontStyle.Bold), ForeColor = Color.White, AutoSize = true, Location = new Point(0, 0) };
+        var title = new Label { Text = "WIN11 GAMING OPTIMIZER", Font = new Font("Segoe UI", 21, FontStyle.Bold), ForeColor = Color.White, AutoSize = true, Location = new Point(0, 0) };
         var subtitle = new Label { Text = "Настройка игр и диагностика  •  Windows 11 x64", ForeColor = Color.FromArgb(170, 185, 204), AutoSize = true, Location = new Point(2, 45) };
         header.Controls.Add(title); header.Controls.Add(subtitle);
         var authorLink = new LinkLabel { Text = "Автор: @cireincroinsea", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), LinkColor = Color.FromArgb(0, 220, 255), ActiveLinkColor = Color.FromArgb(100, 240, 255), VisitedLinkColor = Color.FromArgb(0, 220, 255), BackColor = Color.Transparent, Location = new Point(2 + TextRenderer.MeasureText(subtitle.Text, subtitle.Font).Width + 10, 45), LinkBehavior = LinkBehavior.HoverUnderline };
@@ -85,11 +89,11 @@ public sealed class MainForm : Form
         root.Controls.Add(header, 0, 0);
 
         // Custom navigation instead of the native TabControl: no system-drawn white borders.
-        var tabs = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(8, 10, 14), ColumnCount = 1, RowCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
+        var tabs = new TableLayoutPanel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(14, 21, 33), ColumnCount = 1, RowCount = 2, Margin = new Padding(0), Padding = new Padding(0) };
         tabs.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        tabs.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
+        tabs.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
         tabs.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var nav = new FlowLayoutPanel { Dock = DockStyle.Fill, Height = 88, WrapContents = true, AutoScroll = false, BackColor = Color.FromArgb(8, 10, 14), Padding = new Padding(0), Margin = new Padding(0) };
+        var nav = new FlowLayoutPanel { Dock = DockStyle.Fill, Height = 96, WrapContents = true, AutoScroll = false, BackColor = Color.FromArgb(14, 21, 33), Padding = new Padding(2, 2, 2, 0), Margin = new Padding(0, 0, 0, 8) };
         var pageHost = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(16, 20, 29), Padding = new Padding(0), Margin = new Padding(0) };
         tabs.Controls.Add(nav, 0, 0);
         tabs.Controls.Add(pageHost, 0, 1);
@@ -151,16 +155,17 @@ public sealed class MainForm : Form
                 Text = pageTitle,
                 Tag = pageTitle,
                 Width = pageTitle == "Состояние ПК" ? 135 : pageTitle == "Температуры" ? 125 : pageTitle == "Сеть" ? 90 : pageTitle == "Настройки программы" ? 178 : pageTitle == "Обновления Windows" ? 180 : pageTitle == "Автозагрузка" ? 150 : pageTitle == "Обход" ? 112 : pageTitle == "Журнал" ? 100 : pageTitle == "HARD" ? 100 : pageTitle == "Монитор и драйверы" ? 190 : 132,
-                Height = 36,
+                Height = 40,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(25, 33, 47),
+                BackColor = themeInactiveButton,
                 ForeColor = Color.FromArgb(232, 237, 245),
-                Margin = new Padding(0, 0, 6, 6),
+                Margin = new Padding(0, 0, 8, 7),
                 UseVisualStyleBackColor = false
             };
             pageButton.FlatAppearance.BorderSize = 0;
-            pageButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(39, 52, 73);
-            pageButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(45, 108, 223);
+            pageButton.FlatAppearance.MouseOverBackColor = themeHoverButton;
+            pageButton.FlatAppearance.MouseDownBackColor = themePressedButton;
+            pageButton.Cursor = Cursors.Hand;
             pageButton.Click += (_, _) => SelectPage(page);
             nav.Controls.Add(pageButton);
         }
@@ -341,7 +346,7 @@ public sealed class MainForm : Form
         var optimizeList = CreateTweakList(optimizeTab);
         AddTweakRow(optimizeList, "Power Throttling", "Отключает механизм энергосбережения для фоновых приложений. Может увеличить потребление и нагрев, но обычно не нужен для игры, которая уже находится на переднем плане. Включай только для проверки конкретных просадок.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", 1, "Power Throttling OFF"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling", "PowerThrottlingOff", "Power Throttling"));
         AddTweakRow(optimizeList, "HAGS", "HAGS меняет способ планирования GPU-задач в Windows. На одних системах помогает, на других ничего не меняет или ухудшает плавность. Нужна перезагрузка; сравни средний FPS и 1% low в одной сцене.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", 2, "HAGS включён"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\GraphicsDrivers", "HwSchMode", "HAGS"));
-        AddTweakRow(optimizeList, "Network Throttling", "Меняет внутренний лимит обработки сетевых пакетов Windows. Обычно не уменьшает пинг; при ухудшении нажми «Сбросить».", () => SetDword(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), "Network Throttling OFF"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", "Network Throttling"));
+        AddTweakRow(optimizeList, "Network Throttling (устаревший параметр)", "Старый параметр мультимедийного профиля реестра без подтверждённого выигрыша в пинге или FPS. Не включай без конкретной диагностики: он может влиять на мультимедийные задачи. Сброс удаляет переопределение.", () => SetDword(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", unchecked((int)0xFFFFFFFF), "Network Throttling OFF"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile", "NetworkThrottlingIndex", "Network Throttling"));
         AddTweakRow(optimizeList, "Ultimate Performance", "Переключает Windows на план с меньшим энергосбережением. Может повысить нагрев и расход энергии; FPS не гарантирован.", ApplyUltimatePerformance, RestoreBalanced);
         AddTweakRow(optimizeList, "Microsoft Defender: снизить нагрузку сканирования", "Задаёт рекомендованный средний предел CPU для фоновых проверок Defender — это не жёсткий лимит. Не отключает защиту в реальном времени. Требуются права администратора; сброс задаёт штатное значение 50%.", () => ConfigureDefenderScanCpu(20), () => ConfigureDefenderScanCpu(50));
         AddTweakRow(optimizeList, "Ограничение телеметрии", "Устанавливает политику диагностических данных Windows. Не отключает всю диагностику; Home может игнорировать часть политик.", () => SetDword(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0, "Ограничение диагностических данных"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", "Телеметрия Windows"));
@@ -354,11 +359,11 @@ public sealed class MainForm : Form
         AddTweakRow(optimizeList, "Отключить фоновые приложения (текущий пользователь)", "Ограничивает разрешения фоновых приложений политикой для поддерживаемых приложений. Может влиять на уведомления; эффект на FPS не гарантирован.", () => SetDword(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", 1, "Фоновые приложения ограничены"), () => DeleteRegistryValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications", "GlobalUserDisabled", "Фоновые приложения"));
         AddTweakRow(optimizeList, "Игровой режим Windows", "Включает Game Mode для текущего пользователя. Это штатная настройка Windows; результат зависит от игры.", ApplyGameMode, ResetGameMode);
         AddTweakRow(optimizeList, "Отключить фоновую запись игр (Game DVR)", "Отключает фоновый захват клипов Windows для текущего пользователя. Может снизить фоновую нагрузку, но запись клипов через Xbox Game Bar перестанет работать.", ApplyGameDvr, ResetGameDvr);
-        AddTweakRow(optimizeList, "Отключить захват игр через политику пользователя", "Отключает функции захвата Game DVR через настройки текущего пользователя. Не гарантирует прирост FPS; используй, если не записываешь клипы.", () => SetDword(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AudioCaptureEnabled", 0, "Захват звука Game DVR выключен"), () => DeleteRegistryValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AudioCaptureEnabled", "Захват звука Game DVR"));
+        AddTweakRow(optimizeList, "Отключить запись звука Game DVR", "Отключает только захват звука для игровых клипов текущего пользователя. Не гарантирует прирост FPS; используй, если не записываешь клипы.", () => SetDword(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AudioCaptureEnabled", 0, "Захват звука Game DVR выключен"), () => DeleteRegistryValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\GameDVR", "AudioCaptureEnabled", "Захват звука Game DVR"));
         AddTweakRow(optimizeList, "Оптимизация дисков Windows — не отключать", "Не отключай службу дефрагментации/оптимизации дисков вслепую: Windows использует TRIM для SSD и обслуживание HDD. Отключение может ухудшить обслуживание накопителя; если нужно, меняй расписание штатно через «Оптимизация дисков».", () => MessageBox.Show("Откройте dfrgui.exe — штатную «Оптимизацию дисков». Для SSD рекомендуется оставить автоматическое обслуживание включённым.", "Обслуживание дисков", MessageBoxButtons.OK, MessageBoxIcon.Information), null);
-        AddTweakRow(optimizeList, "ЖЁСТКО: отключить SysMain (Superfetch)", "Останавливает предзагрузку часто используемых приложений. Иногда помогает на системах с HDD или при высокой дисковой активности, но на SSD и современных ПК пользы может не быть. Требуется перезагрузка; сброс возвращает тип запуска к автоматическому.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\SysMain", "Start", 4, "SysMain отключён"), () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\SysMain", "Start", 2, "SysMain — автоматический запуск"));
-        AddTweakRow(optimizeList, "ЖЁСТКО: отключить индексирование Windows Search", "Отключает службу индексирования файлов. Может снизить фоновую дисковую активность, но поиск в меню Пуск и Проводнике станет медленнее. Требуется перезагрузка; сброс возвращает автоматический запуск службы.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WSearch", "Start", 4, "Windows Search отключён"), () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WSearch", "Start", 2, "Windows Search — автоматический запуск"));
-        AddTweakRow(optimizeList, "NTFS: отключить обновление времени последнего доступа", "Уменьшает часть метаданных NTFS на дисках. Эффект обычно небольшой; некоторым программам резервного копирования и аудита нужны метки доступа. Сброс удаляет параметр и возвращает управление Windows.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsDisableLastAccessUpdate", 1, "Обновление времени доступа NTFS отключено"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsDisableLastAccessUpdate", "Время последнего доступа NTFS"));
+        AddTweakRow(optimizeList, "ЖЁСТКО: запретить автозапуск SysMain", "Меняет только тип запуска службы на Disabled и не останавливает уже работающую службу в текущем сеансе; эффект проявится после перезагрузки. На SSD это обычно не даёт выигрыша, а возврат к Automatic может не совпасть с прежней OEM-настройкой.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\SysMain", "Start", 4, "SysMain отключён"), () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\SysMain", "Start", 2, "SysMain — автоматический запуск"));
+        AddTweakRow(optimizeList, "ЖЁСТКО: запретить автозапуск Windows Search", "Меняет только тип запуска службы на Disabled и не останавливает уже работающую службу в текущем сеансе; эффект проявится после перезагрузки. Поиск в меню Пуск и Проводнике может стать медленнее. Сброс задаёт Automatic и может не совпасть с прежней настройкой.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WSearch", "Start", 4, "Windows Search отключён"), () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\WSearch", "Start", 2, "Windows Search — автоматический запуск"));
+        AddTweakRow(optimizeList, "NTFS: отключить обновление времени последнего доступа", "Низкоуровневый параметр файловой системы без ожидаемого выигрыша в играх. Может мешать программам аудита и резервного копирования; оставляй системное значение, если не понимаешь конкретную потребность.", () => SetDword(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsDisableLastAccessUpdate", 1, "Обновление времени доступа NTFS отключено"), () => DeleteRegistryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem", "NtfsDisableLastAccessUpdate", "Время последнего доступа NTFS"));
 
         var startupPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(24) };
         startupTab.Controls.Add(startupPanel);
@@ -409,6 +414,8 @@ public sealed class MainForm : Form
         gamesLayout.RowCount++;
         gamesLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
         gamesLayout.Controls.Add(gamesHeading, 0, gamesLayout.RowCount - 1);
+        AddGameAction("Windows 11 — видеокарта для каждой игры", "Для каждой игры можно выбрать «Высокую производительность» и дискретный GPU, если он доступен. На той же странице есть оптимизация оконных игр DirectX 10/11; после изменения перезапусти игру.", "Настройки графики", () => Process.Start(new ProcessStartInfo("ms-settings:display-advancedgraphics") { UseShellExecute = true }));
+        AddGameAction("Windows 11 — режим питания", "На ноутбуке включай «Максимальная производительность» только при питании от сети: режим может увеличить нагрев и расход батареи. Изменение выполняется штатно в Windows.", "Настройки питания", () => Process.Start(new ProcessStartInfo("ms-settings:powersleep") { UseShellExecute = true }));
         AddGameAction("Dota 2 — параметры запуска для высокого FPS", "Копирует безопасный стартовый набор: -novid +fps_max 0. Убирает стартовый ролик и снимает лимит FPS движка. Безлимитный FPS может увеличить нагрев и сделать frametime менее ровным; для стабильности часто лучше ограничить FPS под монитор.", "Настроить запуск", ApplyDotaLaunchOptions);
         AddGameAction("Dota 2 — приоритет процесса", "Если игра уже запущена, выставляет приоритет AboveNormal. Это не повышает производительность автоматически; если появляются рывки или проблемы со звуком, верни обычный приоритет.", "Приоритет", () => SetGamePriority(new[] { "dota2" }, "Dota 2"));
         AddGameAction("CS2 — приоритет процесса", "Если CS2 запущена, устанавливает приоритет AboveNormal. Не меняет графику и файлы игры; результат зависит от нагрузки.", "Оптимизировать", () => SetGamePriority(new[] { "cs2" }, "Counter-Strike 2"));
@@ -535,12 +542,26 @@ public sealed class MainForm : Form
         statusPanel.Controls.Add(new Label { Text = "СОСТОЯНИЕ ПК  /  ЖИВОЙ ОБЗОР СИСТЕМЫ", Font = new Font("Segoe UI", 17, FontStyle.Bold), AutoSize = true, ForeColor = Color.White, Location = new Point(24, 20) });
         var statusInfo = new Label { Text = "Сбор сведений о системе…", AutoSize = false, Width = 1000, Height = 430, ForeColor = Color.FromArgb(220, 230, 244), Font = new Font("Segoe UI", 11), Location = new Point(24, 75) };
         statusPanel.Controls.Add(statusInfo);
-        void UpdateStatus()
+        bool updatingStatus = false;
+        async Task UpdateStatusAsync()
         {
+            if (updatingStatus || !statusTab.Visible || IsDisposed) return;
+            updatingStatus = true;
+            try
+            {
+            string statusText = await Task.Run(() =>
+            {
             var sbStatus = new StringBuilder();
             sbStatus.AppendLine("СИСТЕМА");
             sbStatus.AppendLine($"Имя ПК: {Environment.MachineName}    |    Пользователь: {Environment.UserName}");
             sbStatus.AppendLine($"Windows: {Environment.OSVersion.VersionString}    |    Архитектура ОС: {(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")}");
+            try
+            {
+                using var osInfo = new ManagementObjectSearcher("SELECT Caption, Version, BuildNumber, OSArchitecture FROM Win32_OperatingSystem");
+                foreach (ManagementObject item in osInfo.Get())
+                    sbStatus.AppendLine($"Редакция Windows: {item["Caption"] ?? "н/д"} | версия {item["Version"] ?? "н/д"} | сборка {item["BuildNumber"] ?? "н/д"} | {item["OSArchitecture"] ?? "н/д"}");
+            }
+            catch { }
             sbStatus.AppendLine($"Логических процессоров: {Environment.ProcessorCount}    |    Время работы Windows: {TimeSpan.FromMilliseconds(Environment.TickCount64).ToString(@"d\.hh\:mm\:ss")}");
             try
             {
@@ -591,13 +612,22 @@ public sealed class MainForm : Form
             sbStatus.AppendLine();
             sbStatus.AppendLine();
             sbStatus.AppendLine("Последнее обновление: " + DateTime.Now.ToString("HH:mm:ss"));
-            statusInfo.Text = sbStatus.ToString();
+            return sbStatus.ToString();
+            });
+            if (!IsDisposed && !statusInfo.IsDisposed && statusTab.Visible)
+                statusInfo.Text = statusText;
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed && !statusInfo.IsDisposed) statusInfo.Text = "Не удалось обновить сведения: " + ex.Message;
+            }
+            finally { updatingStatus = false; }
         }
         var statusTimer = new System.Windows.Forms.Timer { Interval = 8000 };
-        statusTimer.Tick += (_, _) => { try { UpdateStatus(); } catch (Exception ex) { statusInfo.Text = "Не удалось обновить сведения: " + ex.Message; } };
+        statusTimer.Tick += async (_, _) => await UpdateStatusAsync();
         statusTab.VisibleChanged += (_, _) =>
         {
-            if (statusTab.Visible) { UpdateStatus(); statusTimer.Start(); }
+            if (statusTab.Visible) { _ = UpdateStatusAsync(); statusTimer.Start(); }
             else statusTimer.Stop();
         };
         statusTab.Disposed += (_, _) => { statusTimer.Stop(); statusTimer.Dispose(); };
@@ -614,16 +644,21 @@ public sealed class MainForm : Form
 
         // Keep the hardware provider open while the app is running. Re-opening it every tick
         // can repeatedly load/unload its sensor driver and create/delete files beside the EXE.
-        LibreHardwareMonitor.Hardware.Computer? hardwareComputer = null;
-        bool hardwareOpenAttempted = false;
         bool updatingTemperatures = false;
-        void UpdateTemperatures()
+        bool temperatureTabDisposed = false;
+        int temperatureGeneration = 0;
+        async Task UpdateTemperaturesAsync()
         {
-            if (updatingTemperatures || !temperatureTab.Visible) return;
+            if (updatingTemperatures || !temperatureTab.Visible || IsDisposed) return;
+            int generation = temperatureGeneration;
             updatingTemperatures = true;
             try
             {
-                var readings = new List<string>();
+                List<string> readings = await Task.Run(() =>
+                {
+                lock (hardwareSync)
+                {
+                var collectedReadings = new List<string>();
                 if (!hardwareOpenAttempted)
                 {
                     hardwareOpenAttempted = true;
@@ -639,10 +674,14 @@ public sealed class MainForm : Form
                 {
                     hardware.Update();
                     foreach (var sensor in hardware.Sensors.Where(x => x.SensorType == LibreHardwareMonitor.Hardware.SensorType.Temperature && x.Value.HasValue))
-                        readings.Add($"{hardware.HardwareType,-12} | {hardware.Name} | {sensor.Name}: {sensor.Value!.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} °C");
+                        collectedReadings.Add($"{hardware.HardwareType,-12} | {hardware.Name} | {sensor.Name}: {sensor.Value!.Value.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} °C");
                     foreach (var sub in hardware.SubHardware) ReadHardware(sub);
                 }
                 foreach (var hardware in hardwareComputer.Hardware) ReadHardware(hardware);
+                return collectedReadings;
+                }
+                });
+                if (temperatureTabDisposed || IsDisposed || !temperatureTab.Visible || generation != temperatureGeneration) return;
                 var output = new StringBuilder();
                 output.AppendLine("ТЕМПЕРАТУРЫ CPU / GPU / ПЛАТЫ / НАКОПИТЕЛЕЙ");
                 output.AppendLine("────────────────────────────────────────────────────────────────────────────");
@@ -670,7 +709,9 @@ public sealed class MainForm : Form
                 output.AppendLine("Обновлено: " + DateTime.Now.ToString("HH:mm:ss"));
                 output.AppendLine("Показываются только реальные показания доступных датчиков.");
                 tempInfo.SuspendLayout();
-                tempInfo.Clear();
+                int firstVisibleLine = Math.Max(0, tempInfo.GetLineFromCharIndex(tempInfo.GetCharIndexFromPosition(new Point(1, 1))));
+                tempInfo.Text = output.ToString();
+                int characterIndex = 0;
                 foreach (string line in output.ToString().Split('\n'))
                 {
                     string cleanLine = line.TrimEnd('\r');
@@ -687,12 +728,12 @@ public sealed class MainForm : Form
                                 : Color.FromArgb(255, 85, 95);
                         }
                     }
-                    tempInfo.SelectionStart = tempInfo.TextLength;
-                    tempInfo.SelectionLength = 0;
+                    tempInfo.Select(characterIndex, cleanLine.Length);
                     tempInfo.SelectionColor = lineColor;
-                    tempInfo.AppendText(cleanLine + Environment.NewLine);
+                    characterIndex += cleanLine.Length + Environment.NewLine.Length;
                 }
-                tempInfo.SelectionStart = 0;
+                int restoreIndex = tempInfo.GetFirstCharIndexFromLine(firstVisibleLine);
+                if (restoreIndex >= 0) { tempInfo.Select(restoreIndex, 0); tempInfo.ScrollToCaret(); }
                 tempInfo.SelectionLength = 0;
                 tempInfo.SelectionColor = tempInfo.ForeColor;
                 tempInfo.ResumeLayout();
@@ -701,19 +742,25 @@ public sealed class MainForm : Form
             {
                 tempInfo.Text = "Не удалось прочитать датчики:\n" + ex.Message + "\n\nПроверь драйверы и запуск от имени администратора.";
             }
-            finally { updatingTemperatures = false; }
+            finally
+            {
+                updatingTemperatures = false;
+                if (temperatureTabDisposed) { lock (hardwareSync) { try { hardwareComputer?.Close(); } catch { } } }
+                else if (!IsDisposed && temperatureTab.Visible && generation != temperatureGeneration) _ = UpdateTemperaturesAsync();
+            }
         }
-        var tempTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-        tempTimer.Tick += (_, _) => UpdateTemperatures();
+        var tempTimer = new System.Windows.Forms.Timer { Interval = 8000 };
+        tempTimer.Tick += async (_, _) => await UpdateTemperaturesAsync();
         temperatureTab.VisibleChanged += (_, _) =>
         {
-            if (temperatureTab.Visible) { UpdateTemperatures(); tempTimer.Start(); }
-            else tempTimer.Stop();
+            if (temperatureTab.Visible) { _ = UpdateTemperaturesAsync(); tempTimer.Start(); }
+            else { temperatureGeneration++; tempTimer.Stop(); }
         };
         temperatureTab.Disposed += (_, _) =>
         {
             tempTimer.Stop(); tempTimer.Dispose();
-            try { hardwareComputer?.Close(); } catch { }
+            temperatureTabDisposed = true;
+            if (!updatingTemperatures) { lock (hardwareSync) { try { hardwareComputer?.Close(); } catch { } } }
         };
         // Don't open the hardware driver during startup if the temperature page isn't visible.
         // Network throughput, calculated from interface byte-counter deltas.
@@ -722,8 +769,8 @@ public sealed class MainForm : Form
         netPanel.Controls.Add(new Label { Text = "МОНИТОРИНГ СЕТИ", Font = new Font("Segoe UI", 15, FontStyle.Bold), AutoSize = true, ForeColor = Color.White, Location = new Point(24, 20) });
         var netSelect = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 560, Location = new Point(24, 72), BackColor = Color.FromArgb(25, 33, 47), ForeColor = Color.White };
         netPanel.Controls.Add(netSelect);
-        var netRx = new Label { Text = "↓ ПОЛУЧЕНО   0.00 Мбит/с  •  0.00 МБ/с", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(75, 220, 145), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 125), BackColor = Color.FromArgb(18, 42, 35), Padding = new Padding(12, 8, 0, 0) };
-        var netTx = new Label { Text = "↑ ОТДАНО       0.00 Мбит/с  •  0.00 МБ/с", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(90, 170, 255), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 181), BackColor = Color.FromArgb(20, 35, 55), Padding = new Padding(12, 8, 0, 0) };
+        var netRx = new Label { Text = "↓ ПОЛУЧЕНО   ожидание измерения", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(75, 220, 145), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 125), BackColor = Color.FromArgb(18, 42, 35), Padding = new Padding(12, 8, 0, 0) };
+        var netTx = new Label { Text = "↑ ОТДАНО       ожидание измерения", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(90, 170, 255), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 181), BackColor = Color.FromArgb(20, 35, 55), Padding = new Padding(12, 8, 0, 0) };
         var netInfo = new Label { Text = "Скорость и объём трафика выбранного адаптера обновляются автоматически.", AutoSize = false, Width = 900, Height = 90, ForeColor = Color.FromArgb(220, 230, 244), Font = new Font("Segoe UI", 10), Location = new Point(24, 240) };
         netPanel.Controls.Add(netRx); netPanel.Controls.Add(netTx); netPanel.Controls.Add(netInfo);
         var processNetTitle = new Label { Text = "ТРАФИК ПО ПРОЦЕССАМ (СОРТИРОВКА ПО ОБЩЕМУ ОБЪЁМУ)", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(24, 345) };
@@ -733,11 +780,12 @@ public sealed class MainForm : Form
         ApplyDarkScrollBar(netPanel);
         // Per-process traffic is collected from Windows kernel ETW TCP/IP events.
         // Requires elevation (the application manifest already requests administrator rights).
-        var processNetTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+        var processNetTimer = new System.Windows.Forms.Timer { Interval = 4000 };
         var processTraffic = new ConcurrentDictionary<int, (long Rx, long Tx)>();
         var processTrafficPrevious = new Dictionary<int, (long Rx, long Tx)>();
         TraceEventSession? activeNetworkTraceSession = null;
         Task? networkTraceTask = null;
+        CancellationTokenSource? networkTraceCancellation = null;
         string? networkTraceError = null;
         long trafficSampleTicks = Stopwatch.GetTimestamp();
 
@@ -752,6 +800,9 @@ public sealed class MainForm : Form
         void StartProcessTraffic()
         {
             if (networkTraceTask is { IsCompleted: false }) return;
+            networkTraceCancellation?.Dispose();
+            networkTraceCancellation = new CancellationTokenSource();
+            CancellationToken traceToken = networkTraceCancellation.Token;
             processTraffic.Clear();
             processTrafficPrevious.Clear();
             networkTraceError = null;
@@ -760,6 +811,7 @@ public sealed class MainForm : Form
             {
                 try
                 {
+                    traceToken.ThrowIfCancellationRequested();
                     using var session = new TraceEventSession(sessionName);
                     session.StopOnDispose = true;
                     activeNetworkTraceSession = session;
@@ -770,8 +822,10 @@ public sealed class MainForm : Form
                     session.Source.Kernel.TcpIpRecv += data => AddProcessTraffic(data.ProcessID, data.size, true);
                     session.Source.Kernel.UdpIpSend += data => AddProcessTraffic(data.ProcessID, data.size, false);
                     session.Source.Kernel.UdpIpRecv += data => AddProcessTraffic(data.ProcessID, data.size, true);
+                    if (traceToken.IsCancellationRequested) session.Stop();
                     session.Source.Process();
                 }
+                catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
                     networkTraceError = ex.Message;
@@ -783,6 +837,7 @@ public sealed class MainForm : Form
 
         void StopProcessTraffic()
         {
+            try { networkTraceCancellation?.Cancel(); } catch { }
             try { activeNetworkTraceSession?.Stop(); } catch { }
         }
 
@@ -799,7 +854,14 @@ public sealed class MainForm : Form
                 long txDelta = Math.Max(0, pair.Value.Tx - prev.Tx);
                 string name;
                 try { using var p = Process.GetProcessById(pair.Key); name = p.ProcessName; }
-                catch { name = "PID " + pair.Key; }
+                catch
+                {
+                    // Kernel ETW reports a PID, not a process lifetime. Drop exited processes
+                    // so their totals are not shown as live traffic or inherited by reused PIDs.
+                    processTraffic.TryRemove(pair.Key, out _);
+                    processTrafficPrevious.Remove(pair.Key);
+                    continue;
+                }
                 rows.Add((pair.Key, name, pair.Value.Rx, pair.Value.Tx,
                     rxDelta / 1_000_000.0 / elapsed, txDelta / 1_000_000.0 / elapsed));
             }
@@ -820,13 +882,21 @@ public sealed class MainForm : Form
         netRefresh.FlatAppearance.BorderSize = 0; netPanel.Controls.Add(netRefresh);
         var netTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         long lastRx = 0, lastTx = 0; bool hasNetSample = false; var lastNetSampleAt = System.Diagnostics.Stopwatch.StartNew();
+        int adapterRefreshTicks = 0;
         NetworkInterface[] currentNetAdapters = Array.Empty<NetworkInterface>();
         void RefreshNetAdapters()
         {
             string? previousName = (netSelect.SelectedIndex >= 0 && netSelect.SelectedIndex < currentNetAdapters.Length)
                 ? currentNetAdapters[netSelect.SelectedIndex].Id : null;
-            currentNetAdapters = NetworkInterface.GetAllNetworkInterfaces()
+            var refreshedAdapters = NetworkInterface.GetAllNetworkInterfaces()
                 .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback).ToArray();
+            bool adaptersUnchanged = refreshedAdapters.Length == currentNetAdapters.Length
+                && Enumerable.Range(0, refreshedAdapters.Length).All(i =>
+                    refreshedAdapters[i].Id == currentNetAdapters[i].Id
+                    && refreshedAdapters[i].Name == currentNetAdapters[i].Name
+                    && refreshedAdapters[i].OperationalStatus == currentNetAdapters[i].OperationalStatus);
+            if (adaptersUnchanged) return;
+            currentNetAdapters = refreshedAdapters;
             netSelect.BeginUpdate();
             netSelect.Items.Clear();
             foreach (var a in currentNetAdapters)
@@ -842,15 +912,32 @@ public sealed class MainForm : Form
             if (netSelect.SelectedIndex < 0) { netInfo.Text = "Нет доступных сетевых адаптеров."; return; }
             if (netSelect.SelectedIndex >= currentNetAdapters.Length) { RefreshNetAdapters(); return; }
             var adapter = currentNetAdapters[netSelect.SelectedIndex];
+            if (adapter.OperationalStatus != OperationalStatus.Up)
+            {
+                hasNetSample = false;
+                netRx.Text = "↓ ПОЛУЧЕНО   адаптер отключён";
+                netTx.Text = "↑ ОТДАНО       адаптер отключён";
+                netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}. Скорость недоступна.";
+                return;
+            }
             try
             {
                 // IP statistics cover the selected interface across its IP traffic; keep the
                 // selected adapter object stable so counters aren't accidentally taken from another NIC.
                 var stats = adapter.GetIPStatistics();
                 long rx = stats.BytesReceived, tx = stats.BytesSent;
+                if (hasNetSample && (rx < lastRx || tx < lastTx)) hasNetSample = false;
                 double elapsed = Math.Max(0.1, lastNetSampleAt.Elapsed.TotalSeconds);
-                double down = hasNetSample ? Math.Max(0, (rx - lastRx) * 8.0 / 1_000_000.0 / elapsed) : 0;
-                double up = hasNetSample ? Math.Max(0, (tx - lastTx) * 8.0 / 1_000_000.0 / elapsed) : 0;
+                if (!hasNetSample)
+                {
+                    lastRx = rx; lastTx = tx; hasNetSample = true; lastNetSampleAt.Restart();
+                    netRx.Text = "↓ ПОЛУЧЕНО   сбор первого интервала…";
+                    netTx.Text = "↑ ОТДАНО       сбор первого интервала…";
+                    netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}. Измеряется скорость за фактический интервал между снимками.";
+                    return;
+                }
+                double down = Math.Max(0, (rx - lastRx) * 8.0 / 1_000_000.0 / elapsed);
+                double up = Math.Max(0, (tx - lastTx) * 8.0 / 1_000_000.0 / elapsed);
                 lastRx = rx; lastTx = tx; hasNetSample = true; lastNetSampleAt.Restart();
                 netRx.Text = $"↓ ПОЛУЧЕНО   {down.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} Мбит/с  •  {(down / 8).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} МБ/с";
                 netTx.Text = $"↑ ОТДАНО       {up.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} Мбит/с  •  {(up / 8).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} МБ/с";
@@ -860,14 +947,39 @@ public sealed class MainForm : Form
         }
         netRefresh.Click += (_, _) => RefreshNetAdapters();
         netSelect.SelectedIndexChanged += (_, _) => { hasNetSample = false; lastNetSampleAt.Restart(); };
-        netTimer.Tick += (_, _) => { try { SampleNetwork(); } catch (Exception ex) { netInfo.Text = "Ошибка сети: " + ex.Message; } };
-        processNetTimer.Tick += (_, _) => RefreshProcessNetwork();
+        netTimer.Tick += (_, _) =>
+        {
+            try
+            {
+                if (++adapterRefreshTicks >= 5) { adapterRefreshTicks = 0; RefreshNetAdapters(); }
+                SampleNetwork();
+            }
+            catch (Exception ex) { hasNetSample = false; netInfo.Text = "Ошибка сети: " + ex.Message; }
+        };
+        processNetTimer.Tick += (_, _) =>
+        {
+            if (networkTab.Visible && networkTraceError == null && (networkTraceTask == null || networkTraceTask.IsCompleted)) StartProcessTraffic();
+            RefreshProcessNetwork();
+        };
         networkTab.VisibleChanged += (_, _) =>
         {
-            if (networkTab.Visible) { RefreshNetAdapters(); SampleNetwork(); StartProcessTraffic(); RefreshProcessNetwork(); netTimer.Start(); processNetTimer.Start(); }
+            if (networkTab.Visible)
+            {
+                processNetList.BeginUpdate();
+                processNetList.Items.Clear();
+                processNetList.Items.Add("Подключение к ETW и сбор первых показаний…");
+                processNetList.EndUpdate();
+                StartProcessTraffic();
+                netTimer.Start();
+                processNetTimer.Start();
+            }
             else { netTimer.Stop(); processNetTimer.Stop(); hasNetSample = false; StopProcessTraffic(); }
         };
-        networkTab.Disposed += (_, _) => { netTimer.Stop(); netTimer.Dispose(); processNetTimer.Stop(); processNetTimer.Dispose(); StopProcessTraffic(); };
+        networkTab.Disposed += (_, _) =>
+        {
+            netTimer.Stop(); netTimer.Dispose(); processNetTimer.Stop(); processNetTimer.Dispose(); StopProcessTraffic();
+            networkTraceCancellation?.Dispose(); networkTraceCancellation = null;
+        };
         RefreshNetAdapters();
         // Sampling starts only while the network page is visible to avoid background UI work.
 
@@ -878,55 +990,55 @@ public sealed class MainForm : Form
         ApplyDarkScrollBar(monitorPanel);
         var monitorHeading = new Label { Text = "ТОП ПРОЦЕССОВ ПО CPU И ПРОВЕРКА ДРАЙВЕРОВ", Font = new Font("Segoe UI", 14, FontStyle.Bold), AutoSize = true, ForeColor = Color.White, Location = new Point(24, 20) };
         var monitorInfo = new Label { Text = "Топ-15 процессов по CPU. Обновление каждые 5 секунд только при открытой вкладке.", AutoSize = false, Width = 850, Height = 42, ForeColor = Color.FromArgb(170, 185, 204), Location = new Point(24, 58) };
-        var monitorValues = new Label { Text = "Ожидание открытия вкладки…", AutoSize = false, Width = 1000, Height = 390, ForeColor = Color.FromArgb(220, 230, 244), BackColor = Color.FromArgb(8, 10, 14), Font = new Font("Consolas", 10), Location = new Point(24, 108) };
-        var monitorStart = new Button { Text = "Запустить монитор", Width = 190, Height = 36, Location = new Point(24, 620), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 108, 223), ForeColor = Color.White };
-        var monitorStop = new Button { Text = "Остановить", Width = 140, Height = 36, Location = new Point(226, 620), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White, Enabled = false };
-        var driverCheck = new Button { Text = "Проверить драйверы", Width = 200, Height = 36, Location = new Point(378, 620), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 135, 88), ForeColor = Color.White };
-        var driverHelp = new Button { Text = "Где проверить обновления", Width = 230, Height = 36, Location = new Point(590, 620), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White };
-        var deepSeekButton = new Button { Text = "Открыть DeepSeek", Width = 190, Height = 36, Location = new Point(316, 670), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White };
-        var bottleneckCheck = new Button { Text = "Полная диагностика узких мест", Width = 280, Height = 36, Location = new Point(24, 670), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 135, 88), ForeColor = Color.White };
-        foreach (var b in new[] { monitorStart, monitorStop, driverCheck, driverHelp, bottleneckCheck, deepSeekButton }) { b.FlatAppearance.BorderSize = 0; monitorPanel.Controls.Add(b); }
+        var monitorValues = new Label { Text = "Ожидание открытия вкладки…", AutoSize = false, Width = 1000, Height = 430, ForeColor = Color.FromArgb(220, 230, 244), BackColor = Color.FromArgb(8, 10, 14), Font = new Font("Consolas", 10), Location = new Point(24, 108) };
+        // Кнопки управления запуском/остановкой убраны: мониторинг включается автоматически
+        // только пока вкладка видима.
+        var driverCheck = new Button { Text = "Проверить драйверы", Width = 200, Height = 36, Location = new Point(24, 555), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 135, 88), ForeColor = Color.White };
+        var driverHelp = new Button { Text = "Где проверить обновления", Width = 230, Height = 36, Location = new Point(236, 555), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White };
+        var bottleneckCheck = new Button { Text = "Полная диагностика узких мест", Width = 280, Height = 36, Location = new Point(24, 600), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 135, 88), ForeColor = Color.White };
+        var deepSeekButton = new Button { Text = "Открыть DeepSeek", Width = 190, Height = 36, Location = new Point(316, 600), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White };
+        foreach (var b in new[] { driverCheck, driverHelp, bottleneckCheck, deepSeekButton }) { b.FlatAppearance.BorderSize = 0; monitorPanel.Controls.Add(b); }
         monitorPanel.Controls.Add(monitorHeading); monitorPanel.Controls.Add(monitorInfo); monitorPanel.Controls.Add(monitorValues);
-        monitorPanel.SizeChanged += (_, _) => { try { if (monitorPanel.IsHandleCreated) DarkScrollBar.Apply(monitorPanel.Handle, true); monitorPanel.AutoScrollMinSize = new Size(0, 720); } catch { } };
-        monitorPanel.AutoScrollMinSize = new Size(0, 720);
+        monitorPanel.SizeChanged += (_, _) => { try { if (monitorPanel.IsHandleCreated) DarkScrollBar.Apply(monitorPanel.Handle, true); monitorPanel.AutoScrollMinSize = new Size(0, 660); } catch { } };
+        monitorPanel.AutoScrollMinSize = new Size(0, 660);
         var monitorTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-        monitorTimer.Tick += (_, _) =>
+        bool updatingPerformance = false;
+        async Task UpdatePerformanceAsync()
         {
-            try { monitorValues.Text = GetPerformanceSnapshot(); }
-            catch (Exception ex) { monitorValues.Text = "Не удалось обновить топ процессов CPU: " + ex.Message; }
-        };
-        monitorStart.Click += (_, _) => { if (monitorTab.Visible) { monitorTimer.Start(); monitorStop.Enabled = true; monitorStart.Enabled = false; monitorValues.Text = GetPerformanceSnapshot(); } Log("Монитор производительности включён."); };
-        monitorStop.Click += (_, _) => { monitorTimer.Stop(); monitorStop.Enabled = false; monitorStart.Enabled = true; Log("Монитор производительности остановлен."); };
+            if (updatingPerformance || !monitorTab.Visible || IsDisposed) return;
+            updatingPerformance = true;
+            try
+            {
+                string snapshot = await Task.Run(GetPerformanceSnapshot);
+                if (!IsDisposed && !monitorValues.IsDisposed && monitorTab.Visible) monitorValues.Text = snapshot;
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed && !monitorValues.IsDisposed) monitorValues.Text = "Не удалось обновить топ процессов CPU: " + ex.Message;
+            }
+            finally { updatingPerformance = false; }
+        }
+        monitorTimer.Tick += async (_, _) => await UpdatePerformanceAsync();
         monitorTab.VisibleChanged += (_, _) =>
         {
             if (monitorTab.Visible)
             {
-                try
-                {
-                    if (!hardwareOpenAttempted)
-                    {
-                        hardwareOpenAttempted = true;
-                        hardwareComputer = new LibreHardwareMonitor.Hardware.Computer { IsCpuEnabled = true, IsGpuEnabled = true, IsMotherboardEnabled = true, IsMemoryEnabled = true, IsStorageEnabled = true };
-                        hardwareComputer.Open();
-                    }
-                }
-                catch { }
-                monitorValues.Text = GetPerformanceSnapshot();
-                monitorTimer.Start(); monitorStart.Enabled = false; monitorStop.Enabled = true;
+                _ = UpdatePerformanceAsync();
+                monitorTimer.Start();
             }
-            else { monitorTimer.Stop(); monitorStart.Enabled = true; monitorStop.Enabled = false; }
+            else { monitorTimer.Stop(); }
         };
         monitorTab.Disposed += (_, _) => monitorTimer.Dispose();
-        driverCheck.Click += (_, _) => { try { CheckDriversAndDevices(); } catch (Exception ex) { Log("Ошибка проверки драйверов: " + ex.Message); MessageBox.Show(ex.Message, "Проверка драйверов", MessageBoxButtons.OK, MessageBoxIcon.Warning); } };
+        driverCheck.Click += async (_, _) => { driverCheck.Enabled = false; try { await CheckDriversAndDevicesAsync(); } catch (Exception ex) { Log("Ошибка проверки драйверов: " + ex.Message); MessageBox.Show(ex.Message, "Проверка драйверов", MessageBoxButtons.OK, MessageBoxIcon.Warning); } finally { if (!IsDisposed) driverCheck.Enabled = true; } };
         driverHelp.Click += (_, _) => { try { Process.Start(new ProcessStartInfo("ms-settings:windowsupdate-optionalupdates") { UseShellExecute = true }); Log("Открыты дополнительные обновления Windows для проверки драйверов."); } catch { Process.Start(new ProcessStartInfo("devmgmt.msc") { UseShellExecute = true }); } };
-        bottleneckCheck.Click += (_, _) => { Log("Запущен анализ узких мест."); try { Diagnose(); } catch (Exception ex) { Log("Ошибка анализа узких мест: " + ex.Message); MessageBox.Show(ex.Message, "Диагностика", MessageBoxButtons.OK, MessageBoxIcon.Warning); } };
+        bottleneckCheck.Click += async (_, _) => { bottleneckCheck.Enabled = false; Log("Запущен анализ узких мест."); try { await DiagnoseAsync(); } catch (Exception ex) { Log("Ошибка анализа узких мест: " + ex.Message); MessageBox.Show(ex.Message, "Диагностика", MessageBoxButtons.OK, MessageBoxIcon.Warning); } finally { if (!IsDisposed) bottleneckCheck.Enabled = true; } };
         deepSeekButton.Click += (_, _) => { try { Process.Start(new ProcessStartInfo("https://chat.deepseek.com/") { UseShellExecute = true }); Log("Открыт сайт DeepSeek Chat в браузере."); } catch (Exception ex) { Log("Не удалось открыть DeepSeek: " + ex.Message); MessageBox.Show("Не удалось открыть сайт DeepSeek. Открой вручную: https://chat.deepseek.com/\n" + ex.Message, "DeepSeek", MessageBoxButtons.OK, MessageBoxIcon.Warning); } };
 
         var bottom = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
         root.Controls.Add(bottom, 0, 2);
         var diag = new Button { Text = "Диагностика ПК", Width = 180, Height = 30, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 108, 223), ForeColor = Color.White, Margin = new Padding(0, 0, 12, 0) };
         diag.FlatAppearance.BorderSize = 0;
-        diag.Click += (_, _) => { Log("Запущена диагностика ПК."); try { Diagnose(); } catch (Exception ex) { Log("Ошибка диагностики: " + ex.Message); MessageBox.Show(ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); } };
+        diag.Click += async (_, _) => { diag.Enabled = false; Log("Запущена диагностика ПК."); try { await DiagnoseAsync(); } catch (Exception ex) { Log("Ошибка диагностики: " + ex.Message); MessageBox.Show(ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error); } finally { if (!IsDisposed) diag.Enabled = true; } };
         bottom.Controls.Add(diag);
         var reports = new Button { Text = "Папка отчётов", Width = 140, Height = 30, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White, Margin = new Padding(0, 0, 12, 0) };
         reports.FlatAppearance.BorderSize = 0; reports.Click += (_, _) => { Log("Открыта папка отчётов."); OpenReports(); }; bottom.Controls.Add(reports);
@@ -1145,31 +1257,78 @@ public sealed class MainForm : Form
 
     private static readonly Dictionary<int, (TimeSpan Cpu, DateTime At)> processCpuSamples = new();
 
+    private string? GetReportedGpuMemory()
+    {
+        lock (hardwareSync)
+        {
+            try
+            {
+                if (!hardwareOpenAttempted)
+                {
+                    hardwareOpenAttempted = true;
+                    hardwareComputer = new LibreHardwareMonitor.Hardware.Computer
+                    {
+                        IsCpuEnabled = true, IsGpuEnabled = true, IsMotherboardEnabled = true,
+                        IsMemoryEnabled = true, IsStorageEnabled = true
+                    };
+                    hardwareComputer.Open();
+                }
+
+                if (hardwareComputer == null) return null;
+                foreach (var gpu in hardwareComputer.Hardware.Where(h =>
+                    h.HardwareType is LibreHardwareMonitor.Hardware.HardwareType.GpuNvidia
+                        or LibreHardwareMonitor.Hardware.HardwareType.GpuAmd
+                        or LibreHardwareMonitor.Hardware.HardwareType.GpuIntel))
+                {
+                    gpu.Update();
+                    var totalMemory = gpu.Sensors.FirstOrDefault(s =>
+                        s.Value.HasValue &&
+                        (s.Name.Contains("GPU Memory Total", StringComparison.OrdinalIgnoreCase)
+                         || s.Name.Contains("Total GPU Memory", StringComparison.OrdinalIgnoreCase)
+                         || s.Name.Contains("Total VRAM", StringComparison.OrdinalIgnoreCase)));
+                    if (totalMemory?.Value is float value && float.IsFinite(value) && value > 0)
+                        return $"{value:F1} GB (датчик LibreHardwareMonitor: {gpu.Name} / {totalMemory.Name})";
+                }
+            }
+            catch { }
+            return null;
+        }
+    }
+
     private static string GetPerformanceSnapshot()
     {
         var sb = new StringBuilder();
         sb.AppendLine("ТОП-15 ПРОЦЕССОВ ПО ИСПОЛЬЗОВАНИЮ CPU");
         sb.AppendLine("Загрузка в % от общей мощности всех логических процессоров.");
-        sb.AppendLine("Первый снимок собирает базу; рейтинг появится после следующего обновления.");
+        sb.AppendLine("В рейтинг попадают только процессы с достоверной разницей между двумя снимками.");
         var procSamples = new List<(string Name, int Id, double Cpu, long Ram)>();
+        var seenProcessIds = new HashSet<int>();
         var now = DateTime.UtcNow;
         foreach (var p in Process.GetProcesses())
         {
             try
             {
-                double cpu = 0;
                 var cpuTime = p.TotalProcessorTime;
+                seenProcessIds.Add(p.Id);
                 if (processCpuSamples.TryGetValue(p.Id, out var previous))
                 {
-                    double seconds = Math.Max(0.1, (now - previous.At).TotalSeconds);
-                    cpu = Math.Clamp((cpuTime - previous.Cpu).TotalMilliseconds / (seconds * Environment.ProcessorCount * 10.0), 0, 100);
+                    double seconds = (now - previous.At).TotalSeconds;
+                    TimeSpan cpuDelta = cpuTime - previous.Cpu;
+                    if (seconds > 0 && cpuDelta >= TimeSpan.Zero)
+                    {
+                        double measuredCpu = cpuDelta.TotalMilliseconds / (seconds * Environment.ProcessorCount * 10.0);
+                        if (double.IsFinite(measuredCpu) && measuredCpu >= 0 && measuredCpu <= 100)
+                            procSamples.Add((p.ProcessName, p.Id, measuredCpu, p.WorkingSet64 / 1024 / 1024));
+                    }
                 }
                 processCpuSamples[p.Id] = (cpuTime, now);
-                procSamples.Add((p.ProcessName, p.Id, cpu, p.WorkingSet64 / 1024 / 1024));
             }
             catch { }
             finally { p.Dispose(); }
         }
+        foreach (int stalePid in processCpuSamples.Keys.Where(pid => !seenProcessIds.Contains(pid)).ToArray())
+            processCpuSamples.Remove(stalePid);
+        if (procSamples.Count == 0) sb.AppendLine("Недостаточно достоверных снимков; рейтинг появится после следующего обновления.");
         foreach (var x in procSamples.OrderByDescending(x => x.Cpu).Take(15))
             sb.AppendLine($"{x.Name,-28} PID {x.Id,-7} CPU {x.Cpu,5:F1}% | RAM {x.Ram:N0} МБ");
         sb.AppendLine();
@@ -1177,8 +1336,10 @@ public sealed class MainForm : Form
         return sb.ToString();
     }
 
-    private void CheckDriversAndDevices()
+    private async Task CheckDriversAndDevicesAsync()
     {
+        string report = await Task.Run(() =>
+        {
         var sb = new StringBuilder();
         sb.AppendLine("ПРОВЕРКА УСТРОЙСТВ И ДРАЙВЕРОВ");
         sb.AppendLine("Внимание: возраст драйвера сам по себе не означает, что его нужно обновлять. Сверяй модель и версию с производителем.");
@@ -1206,15 +1367,19 @@ public sealed class MainForm : Form
         }
         catch (Exception ex) { sb.AppendLine("WMI driver inventory: " + ex.Message); }
         sb.AppendLine("\nКак искать обновления: Windows Update → Дополнительные параметры → Необязательные обновления → Обновления драйверов; для GPU используй NVIDIA App/официальный сайт NVIDIA, для AMD/Intel — их официальные утилиты. Не устанавливай драйвер только потому, что он старше нескольких лет.");
+        return sb.ToString();
+        });
         var dir = Path.Combine(AppContext.BaseDirectory, "Отчёты"); Directory.CreateDirectory(dir);
-        var file = Path.Combine(dir, $"Drivers_{DateTime.Now:yyyyMMdd_HHmmss}.txt"); File.WriteAllText(file, sb.ToString(), Encoding.UTF8);
+        var file = Path.Combine(dir, $"Drivers_{DateTime.Now:yyyyMMdd_HHmmss}.txt"); File.WriteAllText(file, report, Encoding.UTF8);
         Log("Проверка драйверов завершена; отчёт: " + file);
-        using var view = new ReportForm(sb.ToString()); view.ShowDialog(this);
+        using var view = new ReportForm(report); view.ShowDialog(this);
     }
 
-    private void Diagnose()
+    private async Task DiagnoseAsync()
     {
         Log("Собираю сведения об оборудовании и сети...");
+        string report = await Task.Run(() =>
+        {
         var sb = new StringBuilder();
         var detectedIssues = new List<string>();
         sb.AppendLine("WIN11 GAMING OPTIMIZER — ДИАГНОСТИКА");
@@ -1253,12 +1418,17 @@ public sealed class MainForm : Form
 
         try
         {
+            string? sensorMemory = GetReportedGpuMemory();
             using var searcher = new ManagementObjectSearcher("SELECT Name, DriverVersion, AdapterRAM FROM Win32_VideoController");
             sb.AppendLine("\n=== GPU ===");
+            if (sensorMemory != null) sb.AppendLine("Датчик общей памяти GPU: " + sensorMemory);
             foreach (ManagementObject x in searcher.Get())
             {
-                double ram = x["AdapterRAM"] is null ? 0 : Convert.ToDouble(x["AdapterRAM"]) / 1024 / 1024 / 1024;
-                sb.AppendLine($"{x["Name"]} | driver: {x["DriverVersion"]} | reported VRAM: {ram:F1} GB");
+                object? adapterRam = x["AdapterRAM"];
+                string memoryText = adapterRam is not null
+                    ? $"WMI reports {Convert.ToDouble(adapterRam) / 1024 / 1024 / 1024:F1} GB (may be capped at 4 GB; check the LHM sensor above when available)"
+                    : "VRAM capacity unavailable (WMI did not report it)";
+                sb.AppendLine($"{x["Name"]} | driver: {x["DriverVersion"]} | VRAM: {memoryText}");
             }
         }
         catch (Exception ex) { sb.AppendLine("GPU: " + ex.Message); }
@@ -1398,12 +1568,14 @@ public sealed class MainForm : Form
         else
             foreach (string issue in detectedIssues.Distinct()) sb.AppendLine("[ПРОВЕРИТЬ] " + issue);
         sb.AppendLine("\nОграничения: проверки эвристические. Ошибки сетевых интерфейсов могут быть накопительными, WMI не заменяет SMART, пять ping-проб к 1.1.1.1 не измеряют задержку игрового сервера. Для FPS сравнивай frametime в одной сцене через CapFrameX/PresentMon.");
+        return sb.ToString();
+        });
         var reportDir = Path.Combine(AppContext.BaseDirectory, "Отчёты");
         Directory.CreateDirectory(reportDir);
         var file = Path.Combine(reportDir, $"Diagnostics_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
-        File.WriteAllText(file, sb.ToString(), Encoding.UTF8);
+        File.WriteAllText(file, report, Encoding.UTF8);
         Log($"Отчёт сохранён: {file}");
-        using var view = new ReportForm(sb.ToString());
+        using var view = new ReportForm(report);
         view.ShowDialog(this);
     }
 
@@ -1708,9 +1880,10 @@ public sealed class MainForm : Form
     private void ClearDeliveryOptimizationCache()
     {
         if (!Confirm("Очистить кэш оптимизации доставки обновлений через штатную команду Windows? Это не отключает обновления.")) return;
-        string output = RunCommand("cmd.exe", "/c del /q /f %ProgramData%\\Microsoft\\Windows\\DeliveryOptimization\\Cache\\* 2>nul");
+        string output = RunCommand("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"try { Import-Module DeliveryOptimization -ErrorAction Stop; Delete-DeliveryOptimizationCache -Force -ErrorAction Stop; Write-Output 'OK' } catch { Write-Error $_; exit 1 }\"");
+        bool succeeded = string.Equals(output.Trim(), "OK", StringComparison.OrdinalIgnoreCase);
         Log("Кэш доставки: " + output.Trim());
-        MessageBox.Show("Команда очистки кэша доставки выполнена. Занятые файлы могут остаться.", "Очистка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show(succeeded ? "Штатная команда Windows очистила кэш доставки." : "Windows не подтвердила очистку кэша доставки. Возможно, модуль недоступен или нужны права администратора.\n\n" + output, "Очистка", MessageBoxButtons.OK, succeeded ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
     }
 
     private void CleanOptimizerMemory()
@@ -1781,9 +1954,10 @@ public sealed class MainForm : Form
     private void ClearRecycleBin()
     {
         if (!Confirm("Очистить корзину Windows? Файлы будут удалены окончательно. Продолжить?")) return;
-        string output = RunCommand("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"Clear-RecycleBin -Force -ErrorAction SilentlyContinue\"");
+        string output = RunCommand("powershell.exe", "-NoProfile -ExecutionPolicy Bypass -Command \"try { Clear-RecycleBin -Force -ErrorAction Stop; Write-Output 'OK' } catch { Write-Error $_; exit 1 }\"");
+        bool succeeded = string.Equals(output.Trim(), "OK", StringComparison.OrdinalIgnoreCase);
         Log("Очистка корзины: " + output.Trim());
-        MessageBox.Show("Команда очистки корзины отправлена. Проверь корзину и журнал.", "Очистка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show(succeeded ? "Корзина очищена." : "Windows не подтвердила очистку корзины. Проверь журнал и права доступа.\n\n" + output, "Очистка", MessageBoxButtons.OK, succeeded ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
     }
 
     private void ClearShaderCaches()
@@ -1933,9 +2107,8 @@ public sealed class MainForm : Form
             catch (Exception ex) { Log($"Не удалось изменить приоритет {process.ProcessName}: {ex.Message}"); }
             finally { process.Dispose(); }
         }
-        RememberChange("GAME_PRIORITY", string.Join(",", processNames), "AboveNormal");
-        Log($"{displayName}: приоритет AboveNormal применён к процессам: {changed}; предпочтение сохранено в конфиге.");
-        MessageBox.Show($"Готово. Изменено процессов: {changed}. Предпочтение сохранено в конфиге, но приоритет автоматически не применяется после перезапуска игры — для этого потребуется отдельный фоновый компонент.", displayName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+        Log($"{displayName}: приоритет AboveNormal временно применён к процессам: {changed}. После закрытия и повторного запуска игры Windows вернёт обычный приоритет.");
+        MessageBox.Show($"Готово. Изменено процессов: {changed}. Это временно меняет приоритет только у запущенного процесса; после перезапуска игры настройка сбросится.", displayName, MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     private void OpenSteamValidation(string appId)

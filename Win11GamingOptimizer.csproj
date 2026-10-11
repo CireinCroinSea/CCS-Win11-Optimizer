@@ -8,6 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Win11GamingOptimizer</AssemblyName>
     <RootNamespace>Win11GamingOptimizer</RootNamespace>
+    <PublishDir>$(MSBuildProjectDirectory)\publish</PublishDir>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Management" Version="9.0.0" />

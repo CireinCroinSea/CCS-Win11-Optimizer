@@ -55,3 +55,28 @@
 
 
 Изменение: монитор сетевого трафика по процессам переведён с netstat (который не сообщает байты) на ETW Kernel TCP/IP events через Microsoft.Diagnostics.Tracing.TraceEvent. Счётчики группируются по PID, обновляются раз в 2 секунды и сортируются по сумме принятых/отправленных байтов. Требует elevated process (manifest уже requireAdministrator). Компиляцию в среде создания архива не выполняли; проверить dotnet build на Windows.
+
+ДОПОЛНЕНИЕ ПО АУДИТУ — 11.10.2026
+
+Проверка после исходного отчёта (этот результат актуальнее раннего примечания об отсутствии SDK):
+- dotnet restore — успешно.
+- dotnet build -c Release — успешно, 0 предупреждений и 0 ошибок.
+- dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true — успешно; EXE обновлён в publish. Временные bin/obj удалены после публикации.
+- Приложение и системные твики не запускались на целевом ПК: проверены исходники и сборка, но не применение настроек Windows.
+
+Итоги проверки системных функций:
+- Game Mode — штатная настройка Windows; Microsoft указывает, что большинство игр используют её по умолчанию. Отдельный выигрыш для каждой игры не гарантируется.
+- HAGS, Ultimate Performance, Power Throttling и NetworkThrottlingIndex не являются универсальными ускорителями; сравнивать следует на одной сцене по frametime. NetworkThrottlingIndex помечен как старый параметр без обещания снижения пинга.
+- SysMain и Windows Search меняли только тип запуска службы в реестре, но не останавливали уже работающий сервис. Тексты карточек это теперь уточняют; отключение без конкретной проблемы не рекомендуется.
+- Добавлены переходы к системной графике для отдельной игры и к режиму питания Windows 11. Это штатные настройки, без новых изменений реестра.
+- Удалён вводящий в заблуждение текст о сохранении приоритета игры: AboveNormal применяется только к уже запущенному процессу и исчезает после его закрытия.
+- Очистка корзины и кэша Delivery Optimization теперь проверяет успешный результат PowerShell и показывает ошибку вместо ложного успеха. Для Delivery Optimization вызывается штатный Delete-DeliveryOptimizationCache.
+
+Ограничения сброса сохраняются: существующие вручную заданные параметры реестра и выбранный до оптимизатора план питания не резервируются автоматически; часть сбросов возвращает Windows к типичному значению, а не к индивидуальному OEM/пользовательскому состоянию. Кнопка «Сбросить все» и HARD-профиль требуют осторожности.
+
+Источники Microsoft:
+- Графика для конкретной игры и оптимизации оконных игр: https://support.microsoft.com/en-us/windows/hardware/display-graphics/optimizations-for-windowed-games-in-windows-11
+- URI настроек Windows: https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings
+- Режим питания: https://support.microsoft.com/en-us/windows/change-the-power-mode-for-your-windows-pc-c2aff038-22c9-f46d-5ca0-78696fdf2de8
+- Очистка кэша Delivery Optimization: https://learn.microsoft.com/en-us/powershell/module/deliveryoptimization/delete-deliveryoptimizationcache
+- Режим Delivery Optimization 0 отключает P2P, оставляя загрузку HTTP: https://learn.microsoft.com/en-us/windows/deployment/do/waas-delivery-optimization-reference
