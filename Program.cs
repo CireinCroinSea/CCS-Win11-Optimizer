@@ -31,6 +31,9 @@ public sealed class MainForm : Form
     [DllImport("uxtheme.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
     private static extern int SetWindowTheme(IntPtr hWnd, string? appName, string? idList);
 
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
+
     private static void ApplyDarkScrollBar(Control control)
     {
         void Apply()
@@ -771,9 +774,9 @@ public sealed class MainForm : Form
         netPanel.Controls.Add(netSelect);
         var netRx = new Label { Text = "↓ ПОЛУЧЕНО   ожидание измерения", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(75, 220, 145), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 125), BackColor = Color.FromArgb(18, 42, 35), Padding = new Padding(12, 8, 0, 0) };
         var netTx = new Label { Text = "↑ ОТДАНО       ожидание измерения", AutoSize = false, Width = 780, Height = 48, ForeColor = Color.FromArgb(90, 170, 255), Font = new Font("Segoe UI", 16, FontStyle.Bold), Location = new Point(24, 181), BackColor = Color.FromArgb(20, 35, 55), Padding = new Padding(12, 8, 0, 0) };
-        var netInfo = new Label { Text = "Скорость и объём трафика выбранного адаптера обновляются автоматически.", AutoSize = false, Width = 900, Height = 90, ForeColor = Color.FromArgb(220, 230, 244), Font = new Font("Segoe UI", 10), Location = new Point(24, 240) };
+        var netInfo = new Label { Text = "Скорость вычисляется по разнице IP-счётчиков выбранного адаптера и фактическому времени между снимками. Включает весь трафик адаптера, поэтому может отличаться от скорости в приложении или тесте интернета.", AutoSize = false, Width = 900, Height = 90, ForeColor = Color.FromArgb(220, 230, 244), Font = new Font("Segoe UI", 10), Location = new Point(24, 240) };
         netPanel.Controls.Add(netRx); netPanel.Controls.Add(netTx); netPanel.Controls.Add(netInfo);
-        var processNetTitle = new Label { Text = "ТРАФИК ПО ПРОЦЕССАМ (СОРТИРОВКА ПО ОБЩЕМУ ОБЪЁМУ)", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(24, 345) };
+        var processNetTitle = new Label { Text = "ТРАФИК ПО ПРОЦЕССАМ (ETW, СОРТИРОВКА ПО УЧТЁННОМУ ОБЪЁМУ)", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Location = new Point(24, 345) };
         var processNetList = new ListBox { Location = new Point(24, 375), Width = 900, Height = 260, BackColor = Color.FromArgb(9, 12, 18), ForeColor = Color.FromArgb(220, 230, 244), BorderStyle = BorderStyle.FixedSingle, Font = new Font("Consolas", 10), IntegralHeight = false };
         netPanel.Controls.Add(processNetTitle); netPanel.Controls.Add(processNetList);
         ApplyDarkScrollBar(processNetList);
@@ -881,7 +884,7 @@ public sealed class MainForm : Form
         var netRefresh = new Button { Text = "Обновить список", Width = 170, Height = 36, Location = new Point(600, 70), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(39, 52, 73), ForeColor = Color.White };
         netRefresh.FlatAppearance.BorderSize = 0; netPanel.Controls.Add(netRefresh);
         var netTimer = new System.Windows.Forms.Timer { Interval = 1000 };
-        long lastRx = 0, lastTx = 0; bool hasNetSample = false; var lastNetSampleAt = System.Diagnostics.Stopwatch.StartNew();
+        long lastRx = 0, lastTx = 0, lastNetworkSampleTimestamp = 0; bool hasNetSample = false;
         int adapterRefreshTicks = 0;
         NetworkInterface[] currentNetAdapters = Array.Empty<NetworkInterface>();
         void RefreshNetAdapters()
@@ -889,7 +892,11 @@ public sealed class MainForm : Form
             string? previousName = (netSelect.SelectedIndex >= 0 && netSelect.SelectedIndex < currentNetAdapters.Length)
                 ? currentNetAdapters[netSelect.SelectedIndex].Id : null;
             var refreshedAdapters = NetworkInterface.GetAllNetworkInterfaces()
-                .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback).ToArray();
+                .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .OrderByDescending(n => n.OperationalStatus == OperationalStatus.Up)
+                .ThenByDescending(n => n.NetworkInterfaceType is NetworkInterfaceType.Ethernet or NetworkInterfaceType.Wireless80211)
+                .ThenByDescending(n => n.Speed)
+                .ToArray();
             bool adaptersUnchanged = refreshedAdapters.Length == currentNetAdapters.Length
                 && Enumerable.Range(0, refreshedAdapters.Length).All(i =>
                     refreshedAdapters[i].Id == currentNetAdapters[i].Id
@@ -905,16 +912,24 @@ public sealed class MainForm : Form
             netSelect.SelectedIndex = selected >= 0 ? selected : (netSelect.Items.Count > 0 ? 0 : -1);
             netSelect.EndUpdate();
             hasNetSample = false;
-            lastNetSampleAt.Restart();
+            lastNetworkSampleTimestamp = 0;
         }
         void SampleNetwork()
         {
-            if (netSelect.SelectedIndex < 0) { netInfo.Text = "Нет доступных сетевых адаптеров."; return; }
+            if (netSelect.SelectedIndex < 0)
+            {
+                hasNetSample = false;
+                netRx.Text = "↓ ПОЛУЧЕНО   скорость недоступна";
+                netTx.Text = "↑ ОТДАНО       скорость недоступна";
+                netInfo.Text = "Нет доступных сетевых адаптеров.";
+                return;
+            }
             if (netSelect.SelectedIndex >= currentNetAdapters.Length) { RefreshNetAdapters(); return; }
             var adapter = currentNetAdapters[netSelect.SelectedIndex];
             if (adapter.OperationalStatus != OperationalStatus.Up)
             {
                 hasNetSample = false;
+                lastNetworkSampleTimestamp = 0;
                 netRx.Text = "↓ ПОЛУЧЕНО   адаптер отключён";
                 netTx.Text = "↑ ОТДАНО       адаптер отключён";
                 netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}. Скорость недоступна.";
@@ -926,27 +941,42 @@ public sealed class MainForm : Form
                 // selected adapter object stable so counters aren't accidentally taken from another NIC.
                 var stats = adapter.GetIPStatistics();
                 long rx = stats.BytesReceived, tx = stats.BytesSent;
+                long sampleTimestamp = Stopwatch.GetTimestamp();
                 if (hasNetSample && (rx < lastRx || tx < lastTx)) hasNetSample = false;
-                double elapsed = Math.Max(0.1, lastNetSampleAt.Elapsed.TotalSeconds);
                 if (!hasNetSample)
                 {
-                    lastRx = rx; lastTx = tx; hasNetSample = true; lastNetSampleAt.Restart();
+                    lastRx = rx; lastTx = tx; lastNetworkSampleTimestamp = sampleTimestamp; hasNetSample = true;
                     netRx.Text = "↓ ПОЛУЧЕНО   сбор первого интервала…";
                     netTx.Text = "↑ ОТДАНО       сбор первого интервала…";
-                    netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}. Измеряется скорость за фактический интервал между снимками.";
+                    netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}. Сбор IP-счётчиков; первый интервал ещё не измерен.";
+                    return;
+                }
+                double elapsed = (sampleTimestamp - lastNetworkSampleTimestamp) / (double)Stopwatch.Frequency;
+                if (!double.IsFinite(elapsed) || elapsed <= 0)
+                {
+                    lastRx = rx; lastTx = tx; lastNetworkSampleTimestamp = sampleTimestamp;
+                    netRx.Text = "↓ ПОЛУЧЕНО   ожидание измерения";
+                    netTx.Text = "↑ ОТДАНО       ожидание измерения";
                     return;
                 }
                 double down = Math.Max(0, (rx - lastRx) * 8.0 / 1_000_000.0 / elapsed);
                 double up = Math.Max(0, (tx - lastTx) * 8.0 / 1_000_000.0 / elapsed);
-                lastRx = rx; lastTx = tx; hasNetSample = true; lastNetSampleAt.Restart();
+                lastRx = rx; lastTx = tx; lastNetworkSampleTimestamp = sampleTimestamp; hasNetSample = true;
                 netRx.Text = $"↓ ПОЛУЧЕНО   {down.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} Мбит/с  •  {(down / 8).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} МБ/с";
                 netTx.Text = $"↑ ОТДАНО       {up.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} Мбит/с  •  {(up / 8).ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} МБ/с";
-                netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}  |  номинальная скорость адаптера: {(adapter.Speed > 0 ? (adapter.Speed / 1_000_000.0).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " Мбит/с" : "н/д")}{Environment.NewLine}Всего получено: {rx / 1_000_000.0:F2} MB    •    Всего отправлено: {tx / 1_000_000.0:F2} MB (счётчики адаптера с момента сброса)";
+                netInfo.Text = $"Адаптер: {adapter.Name}{Environment.NewLine}Статус: {adapter.OperationalStatus}  |  номинальная скорость адаптера: {(adapter.Speed > 0 ? (adapter.Speed / 1_000_000.0).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " Мбит/с" : "н/д")}{Environment.NewLine}Всего получено: {rx / 1_000_000.0:F2} МБ    •    Всего отправлено: {tx / 1_000_000.0:F2} МБ (счётчики адаптера с момента сброса){Environment.NewLine}ETW-учёт по процессам может отличаться от IP-счётчиков адаптера и зависит от доступности системных событий.";
             }
-            catch (Exception ex) { netInfo.Text = "Не удалось прочитать счётчики: " + ex.Message; }
+            catch (Exception ex)
+            {
+                hasNetSample = false;
+                lastNetworkSampleTimestamp = 0;
+                netRx.Text = "↓ ПОЛУЧЕНО   скорость недоступна";
+                netTx.Text = "↑ ОТДАНО       скорость недоступна";
+                netInfo.Text = "Не удалось прочитать счётчики: " + ex.Message;
+            }
         }
         netRefresh.Click += (_, _) => RefreshNetAdapters();
-        netSelect.SelectedIndexChanged += (_, _) => { hasNetSample = false; lastNetSampleAt.Restart(); };
+        netSelect.SelectedIndexChanged += (_, _) => { hasNetSample = false; lastNetworkSampleTimestamp = 0; };
         netTimer.Tick += (_, _) =>
         {
             try
@@ -1054,6 +1084,22 @@ public sealed class MainForm : Form
         if (currentLanguage == "en") ApplyLanguage("en");
         Log("Программа готова. Начни с диагностики.");
         Log("Универсальная версия: обнаруживает оборудование автоматически; не применяет опасные твики автоматически.");
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        // DWMWA_USE_IMMERSIVE_DARK_MODE = 20; DWMWA_CAPTION_COLOR = 35 on Windows 11.
+        try
+        {
+            int darkMode = 1;
+            DwmSetWindowAttribute(Handle, 20, ref darkMode, sizeof(int));
+            int blackCaption = 0x000000;
+            DwmSetWindowAttribute(Handle, 35, ref blackCaption, sizeof(int));
+            int whiteCaptionText = 0xFFFFFF;
+            DwmSetWindowAttribute(Handle, 36, ref whiteCaptionText, sizeof(int));
+        }
+        catch { }
     }
 
     private enum TweakRisk { Safe, Medium, High }
